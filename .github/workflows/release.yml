@@ -1,0 +1,121 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 触发条件: 推送 v* 标签（如 v0.1.0）
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write  # 需要写入权限来创建 Release
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史
+      
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "📌 Version: $VERSION"
+      
+      - name: Install dependencies
+        run: |
+          # 安装 jq 用于 JSON 处理
+          sudo apt-get update
+          sudo apt-get install -y jq zip
+      
+      - name: Validate commands directory
+        run: |
+          if [ ! -d "commands" ]; then
+            echo "❌ Error: commands/ directory not found"
+            exit 1
+          fi
+          
+          FILE_COUNT=$(find commands -name "*.md" | wc -l)
+          echo "✅ Found $FILE_COUNT template files in commands/"
+          
+          if [ $FILE_COUNT -eq 0 ]; then
+            echo "❌ Error: No .md files found in commands/"
+            exit 1
+          fi
+      
+      - name: Create release packages
+        run: |
+          chmod +x .github/workflows/scripts/create-release-packages.sh
+          .github/workflows/scripts/create-release-packages.sh ${{ steps.get_version.outputs.VERSION }}
+      
+      - name: Verify release packages
+        run: |
+          echo "📦 Verifying release packages..."
+          
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          VERSION_NUM=${VERSION#v}
+          
+          CURSOR_ZIP=".genreleases/sckit-cursor-${VERSION_NUM}.zip"
+          CLAUDE_ZIP=".genreleases/sckit-claude-${VERSION_NUM}.zip"
+          
+          if [ ! -f "$CURSOR_ZIP" ]; then
+            echo "❌ Error: Cursor package not found"
+            exit 1
+          fi
+          
+          if [ ! -f "$CLAUDE_ZIP" ]; then
+            echo "❌ Error: Claude package not found"
+            exit 1
+          fi
+          
+          echo "✅ Both packages verified"
+          
+          # 检查包内容
+          echo ""
+          echo "📋 Cursor package contents:"
+          unzip -l "$CURSOR_ZIP" | head -20
+          
+          echo ""
+          echo "📋 Claude package contents:"
+          unzip -l "$CLAUDE_ZIP" | head -20
+      
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x .github/workflows/scripts/create-github-release.sh
+          .github/workflows/scripts/create-github-release.sh \
+            ${{ steps.get_version.outputs.VERSION }} \
+            $GITHUB_TOKEN
+      
+      - name: Upload release artifacts (for debugging)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-packages
+          path: .genreleases/*.zip
+          retention-days: 7
+      
+      - name: Summary
+        if: success()
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          echo "## ✅ Release $VERSION Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Packages" >> $GITHUB_STEP_SUMMARY
+          echo "- sckit-cursor-${VERSION#v}.zip" >> $GITHUB_STEP_SUMMARY
+          echo "- sckit-claude-${VERSION#v}.zip" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "uv tool install sckit-cli --from git+${{ github.server_url }}/${{ github.repository }}.git" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Release Page](https://github.com/${{ github.repository }}/releases/tag/$VERSION)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Installation Guide](https://github.com/${{ github.repository }}/blob/main/README.md)" >> $GITHUB_STEP_SUMMARY
+
