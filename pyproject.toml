@@ -1,7 +1,7 @@
 [project]
 name = "sckit-cli"
-version = "0.1.0"
-description = "轻量级提示词管理工具 - 从GitHub部署AI编辑器提示词模板"
+version = "0.2.0"
+description = "轻量级slash-command管理工具 - 从GitHub快速部署常用slash-command"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
