@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Optional, Callable
 from datetime import datetime
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 # ============================================================================
@@ -574,20 +574,44 @@ def copy_template_files(
 
 def prompt_editor_choice() -> Editor:
     """
-    T036: 交互式编辑器选择
+    T036 + T016: 交互式编辑器选择
     
-    使用 Rich Prompt 让用户选择编辑器
+    使用箭头键选择界面让用户选择编辑器。
+    在非交互式环境（CI/CD）中自动降级到默认值。
     """
-    choice = Prompt.ask(
-        "选择 AI 编辑器",
-        choices=["Cursor", "Claude"],
-        default="Cursor"
-    )
-    
-    if choice.lower() == "cursor":
+    # 检测非交互式环境
+    if not sys.stdin.isatty():
+        console.print("[cyan]Non-interactive mode: using Cursor[/cyan]")
         return Editor.CURSOR
-    else:
-        return Editor.CLAUDE
+    
+    # 交互式模式：使用箭头键选择
+    try:
+        from sckit_cli.utils.interactive import select_with_arrows
+        
+        options = {
+            "Cursor": "Cursor AI Editor",
+            "Claude": "Claude Code Editor"
+        }
+        
+        choice = select_with_arrows(
+            options=options,
+            prompt="选择 AI 编辑器",
+            default="Cursor",
+            console=console
+        )
+        
+        # 转换为 Editor 枚举
+        return Editor.CURSOR if choice == "Cursor" else Editor.CLAUDE
+    
+    except ImportError:
+        # 降级：readchar 未安装，使用旧版文本输入
+        console.print("[yellow]Using text input mode[/yellow]")
+        choice = Prompt.ask(
+            "选择 AI 编辑器",
+            choices=["Cursor", "Claude"],
+            default="Cursor"
+        )
+        return Editor.CURSOR if choice.lower() == "cursor" else Editor.CLAUDE
 
 
 # ============================================================================
