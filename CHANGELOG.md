@@ -12,7 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic CLI framework with Typer
 - Support for Cursor and Claude Code editors
 - GitHub Release integration for template distribution
-- Interactive editor selection
+- **Interactive arrow-key selection for editor choice in `init` command** (Feature 002)
+  - Visual selection interface using ↑/↓ arrow keys
+  - Automatic fallback to default editor in non-interactive environments (CI/CD)
+  - ESC to cancel, Ctrl+C to interrupt
+  - Cross-platform keyboard support via `readchar`
 - Force overwrite mode for updates
 - Progress indicators for downloads
 - Cross-platform support (Windows, macOS, Linux)

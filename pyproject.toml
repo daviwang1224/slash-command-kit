@@ -1,6 +1,6 @@
 [project]
 name = "sckit-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "轻量级slash-command管理工具 - 从GitHub快速部署常用slash-command"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -25,6 +25,7 @@ dependencies = [
     "typer>=0.9.0",
     "rich>=13.0.0",
     "httpx>=0.24.0",
+    "readchar>=4.0.0",
 ]
 
 [project.optional-dependencies]
